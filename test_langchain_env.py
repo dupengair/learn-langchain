@@ -1,10 +1,14 @@
-import langchain
-import langgraph
-import openai
-import importlib
-import os
-from dotenv import load_dotenv
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough
+from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
+from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_openai import ChatOpenAI
+from dotenv import load_dotenv
+import langchain, langgraph
+import importlib
+import openai
+import os
+
 
 load_dotenv()
 # 如按本文前面步骤操作，此时项目中不存在 .env 文件，`load_dotenv()` 函数返回 `False` 是正常的
