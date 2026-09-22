@@ -15,6 +15,7 @@ print(f"PDF总页数：{len(pdf_docs)}")
 print(f"第1页内容：{pdf_docs[0].page_content[:200]}...")
 print(f"第1页元数据：{pdf_docs[0].metadata}")  # 元数据包含页码、文档路径
 
+'''
 # 方案2：复杂款（需保留表格/格式时用）
 from langchain_community.document_loaders import PDFPlumberLoader
 
@@ -22,3 +23,4 @@ loader = PDFPlumberLoader(pdf_path)
 pdf_docs_adv = loader.load()
 print("\nPDF文档加载结果（复杂款）：")
 print(f"第1页表格/格式保留情况：{pdf_docs_adv[0].page_content[:200]}...")
+'''
