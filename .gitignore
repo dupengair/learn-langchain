@@ -13,3 +13,6 @@ __pycache__/
 .idea/
 .vscode/
 .DS_Store
+
+# Faiss 向量数据库
+faiss_db/
