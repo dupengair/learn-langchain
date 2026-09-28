@@ -25,7 +25,11 @@ llm = ChatOpenAI(
     api_key=API_KEY,
     base_url=BASE_URL,
     model=MODEL,        # 注意：根据你使用的模型修改名称！！！！ 后面章节不再继续说明
-    temperature=0.3
+    temperature=0.3,
+    max_tokens=1024,        # 最大生成 tokens 数，避免生成过长内容
+    extra_body={            # 关闭 Qwen3 的 thinking 模式：
+        "chat_template_kwargs": {"enable_thinking": False}  # extra_body 里的字段会原样附加进 OpenAI 请求体
+    }
 )
 
 # 5. 定义 State
