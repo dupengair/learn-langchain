@@ -41,6 +41,7 @@ load_dotenv()
 API_KEY = os.getenv("API_KEY")
 BASE_URL = os.getenv("BASE_URL")
 MODEL = os.getenv("MODEL")
+MODEL_PATH = os.getenv("MODEL_PATH")
 
 if not API_KEY:
     raise ValueError("未检测到 API_KEY，请检查 .env 文件是否配置正确")
@@ -48,6 +49,8 @@ if not BASE_URL:
     raise ValueError("未检测到 BASE_URL，请检查 .env 文件是否配置正确")
 if not MODEL:
     raise ValueError("未检测到 MODEL，请检查 .env 文件是否配置正确")
+if not MODEL_PATH:
+    raise ValueError("未检测到 MODEL_PATH，请检查 .env 文件是否配置正确")
 
 llm = ChatOpenAI(
     api_key=API_KEY,
@@ -61,7 +64,7 @@ llm = ChatOpenAI(
 )
 
 # 2. 本地Qwen嵌入模型路径
-main_path = "/home/dupengair/shared/LLM/Fine-tuning/"
+main_path = MODEL_PATH
 model = "model/Qwen3-Embedding-0.6B"
 embedding_model_name = main_path+model
 # 验证模型路径有效性

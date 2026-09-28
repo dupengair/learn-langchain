@@ -5,6 +5,15 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+MODEL_PATH = os.getenv("MODEL_PATH")
+
+if not MODEL_PATH:
+    raise ValueError("未检测到 MODEL_PATH，请检查 .env 文件是否配置正确")
+
 
 txt_path = os.path.join("knowledge_base", "test.txt")
 if not os.path.exists(txt_path):
@@ -25,7 +34,7 @@ split_docs: list[Document] = text_splitter.split_documents(txt_docs)
 print(f"分割后的文本片段数：{len(split_docs)}")
 
 # 3. 初始化本地CPU运行的嵌入模型（替换QwenEmbeddings）
-main_path = "/home/dupengair/shared/LLM/Fine-tuning/"
+main_path = MODEL_PATH
 model = "model/Qwen3-Embedding-0.6B"
 embedding_model_name = main_path+model
 

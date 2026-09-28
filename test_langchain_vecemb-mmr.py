@@ -3,10 +3,17 @@ from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.retrievers import BaseRetriever
 from langchain_core.documents import Document
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
+MODEL_PATH = os.getenv("MODEL_PATH")
+
+if not MODEL_PATH:
+    raise ValueError("未检测到 MODEL_PATH，请检查 .env 文件是否配置正确")
 
 # 本地Qwen嵌入模型路径
-main_path = "/home/dupengair/shared/LLM/Fine-tuning/"
+main_path = MODEL_PATH
 model = "model/Qwen3-Embedding-0.6B"
 embedding_model_name = main_path+model
 
