@@ -2,36 +2,11 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.chat_history import BaseChatMessageHistory, InMemoryChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
+from llm_config import get_chat_model
 import langchain, langgraph
 import importlib
 import openai
-import os
-
-
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-BASE_URL = os.getenv("BASE_URL")
-MODEL = os.getenv("MODEL")
-
-if not API_KEY:
-    raise ValueError("未检测到 API_KEY，请检查 .env 文件是否配置正确")
-if not BASE_URL:
-    raise ValueError("未检测到 BASE_URL，请检查 .env 文件是否配置正确")
-if not MODEL:
-    raise ValueError("未检测到 MODEL，请检查 .env 文件是否配置正确")
-
-llm = ChatOpenAI(
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    model=MODEL,         
-    temperature=0.3,        # 随机性：0-1，越小越严谨，越大越有创造力
-    max_tokens=1024,        # 最大生成 tokens 数，避免生成过长内容
-    extra_body={            # 关闭 Qwen3 的 thinking 模式：
-        "chat_template_kwargs": {"enable_thinking": False}  # extra_body 里的字段会原样附加进 OpenAI 请求体
-    }
-)
+llm = get_chat_model(temperature=0.3, max_tokens=1024)
 
 # 1. 定义提示词模板（包含历史消息占位符）
 full_memory_prompt = ChatPromptTemplate.from_messages([

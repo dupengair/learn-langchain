@@ -1,33 +1,9 @@
 from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
-from langchain_openai import ChatOpenAI
-from dotenv import load_dotenv
-import os
-
-
+from llm_config import get_chat_model
 # -------------------------- 1. 环境与模型(与原脚本一致) --------------------------
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
-BASE_URL = os.getenv("BASE_URL")
-MODEL = os.getenv("MODEL")
 
-if not API_KEY:
-    raise ValueError("未检测到 API_KEY，请检查 .env 文件是否配置正确")
-if not BASE_URL:
-    raise ValueError("未检测到 BASE_URL，请检查 .env 文件是否配置正确")
-if not MODEL:
-    raise ValueError("未检测到 MODEL，请检查 .env 文件是否配置正确")
-
-llm = ChatOpenAI(
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    model=MODEL,
-    temperature=0.3,        # 实测 few-shot + T=0.3 组合最优，不必改 0
-    max_tokens=1024,
-    extra_body={            # 关闭 Qwen3 thinking 模式（与原脚本一致）
-        "chat_template_kwargs": {"enable_thinking": False}
-    }
-)
+llm = get_chat_model(temperature=0.3, max_tokens=1024)
 
 
 # -------------------------- 2. 定义计算工具（Function Calling 核心） --------------------------
