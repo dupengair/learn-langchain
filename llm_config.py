@@ -14,9 +14,11 @@ Ollama 认 OpenAI 标准值 reasoning_effort="none"，但不认 vLLM 的 chat_te
 vLLM 0.10.2 的 reasoning_effort 枚举只有 low/medium/high，收到 "none" 直接 422。
 详细分析见 docs/09-gguf-model-load.md 第 8、9、10 节。
 """
+# 导入系统模块，用于读取环境变量
 import os
-
+# 导入dotenv，用于从.env文件加载环境变量（如API_KEY）
 from dotenv import load_dotenv
+# 导入ChatOpenAI，用于调用OpenAI兼容的大模型
 from langchain_openai import ChatOpenAI
 
 
