@@ -2,7 +2,7 @@
 
 LangChain / LangGraph 大模型应用开发学习仓库。全程基于**本地模型服务**（OpenAI 兼容接口），所有代码注释与文档均为中文，按 9 个阶段循序渐进。
 
-当前共 **56 个教学演示脚本**（`test_*.py`，模块顶层直接执行，不是 pytest 测试），配套 **10 篇踩坑/原理文档**。脚本默认在 **Ollama + Qwen3.5-4B(GGUF)** 下运行，可通过 `.env` 一行切换到 **vLLM + Qwen3-0.6B**。
+当前共 **67 个教学演示脚本**（`test_*.py`，模块顶层直接执行，不是 pytest 测试），配套 **11 篇文档**（1 篇学习方案 + 10 篇踩坑/原理）。脚本默认在 **Ollama + Qwen3.5-4B(GGUF)** 下运行，可通过 `.env` 一行切换到 **vLLM + Qwen3-0.6B**。
 
 ## 学习路线
 
@@ -16,7 +16,7 @@ LangChain / LangGraph 大模型应用开发学习仓库。全程基于**本地�
 | 4 | 应用级系统设计与 RAG（文档加载、切分、向量检索、RAG 问答） | ✅ |
 | 5 | 智能体应用设计与实现（Function Calling） | ✅ |
 | 6 | LangGraph 基础（有状态工作流、节点、边、状态管理、superstep） | ✅ |
-| 7 | LangGraph 进阶（多智能体协作） | 🔶 基础模式已跑通 |
+| 7 | LangGraph 进阶（多智能体协作） | 🔶 基础协作、checkpoint/interrupt、并行、子图已跑通 |
 | 8 | 智能体综合实战 | ⬜ |
 | 9 | 项目总结与展望 | ⬜ |
 
@@ -28,7 +28,7 @@ learn-langchain/
 ├── docs/                      # 学习文档与踩坑记录(见文末列表)
 ├── CLAUDE.md                  # Claude Code 协作约定
 ├── .env.example               # 环境变量模板(.env 不入库)
-└── test_*.py                  # 56 个教学演示脚本,按主题分组如下
+└── test_*.py                  # 67 个教学演示脚本,按主题分组如下
 ```
 
 | 主题 | 脚本 |
@@ -42,7 +42,9 @@ learn-langchain/
 | 文档加载与切分 | `test_langchain_load-txt` `test_langchain_load-md` `test_langchain_load-pdf` `test_langchain_load-docs` `test_langchain_load-multi` `test_langchain_textsplit-CharacterTextSplitter` `test_langchain_textsplit-MarkdownTextSplitter` `test_langchain_textsplit-RecursiveCharacterTextSplitter` |
 | 向量与 RAG | `test_langchain_vecemb-textvec` `test_langchain_vecemb-faissretrive` `test_langchain_vecemb-search` `test_langchain_vecemb-mmr` `test_langchain_vecemb-RAG-qa` `test_langchain_vecemb-RAG-evaluate`(ragas 评估) |
 | LangGraph 基础 | `test_langgraph_hello` `test_langgraph_node` `test_langgraph_status` `test_langgraph_simple-llm` `test_langgraph_edges-fix` `test_langgraph_edges-cond` `test_langgraph_edges-loop` `test_langgraph_superstep-linear` `test_langgraph_superstep-execflow` `test_langgraph_superstep-branch` `test_langgraph_superstep-loop` |
-| 多智能体 | `test_multiagent_simpleLLM` `test_multiagent_multiLLM` `test_multiagent_arch-supervisor`(supervisor 架构) |
+| 多智能体协作 | `test_multiagent_simpleLLM` `test_multiagent_multiLLM` `test_multiagent_parallel`(并行节点) `test_multiagent_arch-supervisor`(supervisor 架构) `test_multiagent_subgraph`(子图) |
+| 持久化与人工干预 | `test_multiagent_checkpoint`(存档恢复) `test_multiagent_interrupt-before`(执行前人工确认) `test_multiagent_interrupt-after` `test_multiagent_retry-count`(重试计数) `test_multiagent_state-undo`(状态撤销) |
+| 状态管理综合实战 | `test_multiagent_state-manual`(手动状态管理) `test_multiagent_novel-agent`(小说创作全流程+进度追踪,输出见 `novel_final_output.txt`) |
 
 ## 环境准备
 
@@ -137,6 +139,7 @@ llm = get_chat_model(temperature=0.3, max_tokens=1024)
 | [07-ragas-langchain-community-compat](docs/07-ragas-langchain-community-compat.md) | ragas 与 langchain-community 兼容性垫片 |
 | [08-faiss-load-local-index-name](docs/08-faiss-load-local-index-name.md) | FAISS 本地索引加载的名称坑 |
 | [09-gguf-model-load](docs/09-gguf-model-load.md) | ★ GGUF 模型加载、Ollama 后端适配、关 thinking 参数演进(8~10 节为本仓库架构定稿依据) |
+| [10-interrupt-before-stream-loop](docs/10-interrupt-before-stream-loop.md) | ★ interrupt_before 中断语义六问:stream/invoke 入口、for 循环与引擎停摆、GraphInterrupt 源码、generator 惰性触发(附纯图实验) |
 
 ## 约定
 
