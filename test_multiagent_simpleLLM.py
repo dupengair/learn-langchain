@@ -2,7 +2,7 @@
 from llm_config import get_chat_model
 from langchain_core.prompts import ChatPromptTemplate
 
-# 4. 初始化大模型（和LangChain案例一样）
+# 2. 初始化大模型（和LangChain案例一样）
 llm = get_chat_model(temperature=0.3, max_tokens=1024)
 
 # 构建超长指令（模拟复杂任务）

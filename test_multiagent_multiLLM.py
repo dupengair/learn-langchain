@@ -5,7 +5,7 @@ from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.state import CompiledStateGraph
 
-# 4. 初始化大模型（和LangChain案例一样）
+# 2. 初始化大模型（和LangChain案例一样）
 llm = get_chat_model(temperature=0.3, max_tokens=1024)
 
 # 5. 定义全局状态（所有智能体共享的数据，v1.0.0+ 推荐用TypedDict规范状态）

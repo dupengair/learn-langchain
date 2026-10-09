@@ -6,7 +6,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_core.output_parsers import StrOutputParser
 from langgraph.checkpoint.memory import MemorySaver
 
-# 4. 初始化大模型（和LangChain案例一样）
+# 2. 初始化大模型（和LangChain案例一样）
 llm = get_chat_model(temperature=0.3, max_tokens=1024)
 
 class NovelState(TypedDict):
