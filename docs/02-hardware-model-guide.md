@@ -14,6 +14,7 @@
 | 有 4090 (24G) PC 可用？ | **训推分离**：4090 微调 → 4050 推理 | 见第 6 节，推荐微调目标 4B，上限 8B |
 | 还想做成手机端侧聊天 App？ | 1.7B / 4B 的 GGUF 产物 | 8B 仅高配 Android 旗舰勉强，见第 7 节 |
 | 宿主机内存 16GB → 32GB？ | 推理解锁 14B / 30B-A3B MoE，微调上限不变 | 见第 8 节：收益全在 ollama 混合推理路线，质量对比见 8.3 |
+| 宿主机内存 32GB → 40GB（32+8）？ | 推理解锁新一代 **35B-A3B MoE**（Qwen3.5 / Qwen3.6，HF 上该内存档质量最高，超 30B-A3B 一代），微调上限不变 | 见第 9 节：32+8 混插带宽打约九折，dense 27B 级仍不推荐 |
 
 **核心结论：8B 能跑，但不是用现在的 vLLM 路线，而是用 ollama（或 llama.cpp）的量化 + 混合推理路线。日常性价比最高的是 4B 量化版。**
 
@@ -386,7 +387,100 @@ decode 10-20 tok/s 流式可读（8.2 节），但 RAG 的 prompt 天然长（to
 
 ---
 
-## 9. 一句话建议
+## 9. 内存再升级：宿主机 32GB → 40GB（32+8），Ollama 选型复核
+
+> 补充日期：2026-10-15。场景：在 32GB 方案（第 8 节）基础上再插一条 8GB 内存，宿主机到 40GB（32GB + 8GB 两条）。GPU 不变（RTX 4050 Laptop 6GB，可用约 4.7GB，口径见第 1 节）。
+
+**先给结论：40GB 的边际收益比 16→32GB 那一步小——容量上只解锁"新一代 35B 级 A3B MoE + 更高量化档"，但其中正好有一个真惊喜：Qwen3.5 / Qwen3.6-35B-A3B，是当前 HuggingFace 上这个内存档质量最高的开源模型，全面超过 30B-A3B 一代；速度上要注意 32+8 混插会让内存带宽打约九折。微调上限依旧不变（瓶颈仍是显存）。**
+
+### 9.1 内存预算：.wslconfig 与真实可用量
+
+40GB 宿主机的分配建议（Windows 自身留 8GB）：
+
+```ini
+[wsl2]
+memory=32GB
+swap=16GB
+```
+
+WSL2 的 32GB 并不都归模型：扣掉 ollama 运行时、Linux 页缓存和系统占用，**权重 + KV cache 的安稳预算按 28GB 估**。对比 32GB 宿主机（WSL2 24GB、预算约 20-21GB，见 8.1 节）：35B-A3B 的 Q4 权重从"勉强塞下"变成"宽裕 + 长上下文余量"，并且解锁了 Q5 量化档。Windows 侧要跑大型 IDE / 浏览器多开就压到 `memory=30GB`，35B-A3B 的 Q4 仍装得下。
+
+### 9.2 32+8 混插的带宽代价（Flex Mode，先有预期）
+
+8.1 节的原理在 40GB 下不变：**速度由带宽决定，容量只决定装不装得下**。但 32+8 两条不对称内存引入一个新变量——Intel **Flex Mode**：只有两条容量对齐的部分（8+8=16GB）跑双通道，32GB 条多出来的 24GB 走单通道，**有效带宽比对称双通道低约 10-20%**。
+
+MoE 模型每 token 都要从内存读约 2GB 激活专家权重，是典型的带宽敏感负载，所以本节的 tok/s 估算已按打九折取值。已经买了 32+8 照样能用（容量收益远大于一成带宽损失）；若还没下单，两条同规格（2×16 / 2×20 / 2×24）才是对称双通道，速度更好。
+
+### 9.3 40GB 下的选型总表（Q4 口径 @ ollama 混合推理）
+
+| 模型 | 总参/激活 | Q4 体积 | 40GB 内存下的可行性 | 预期速度* |
+|------|----------|--------|--------------------|----------|
+| qwen3.5:9b（dense） | 9B | ~5.5GB | ✅ 大半进 GPU | 20-35 tok/s |
+| gpt-oss:20b | 21B / 3.6B | ~12GB | ✅ 轻松 | 15-25 tok/s |
+| qwen3:30b-a3b-instruct-2507 | 30.5B / 3.3B | ~18.6GB（Q5 ~22GB 也装得下） | ✅ | 10-18 tok/s |
+| **qwen3.5 / qwen3.6 35B-A3B** | 35B / 3B | ~20-23GB（Q5 ~24-25GB 临界可跑） | ✅ **甜点位** | 6-15 tok/s |
+| Qwen3.6-27B（dense） | 27B | ~16.5GB | ⚠️ 装得下但带宽拖死 | 3-6 tok/s，不推荐 |
+| Qwen3.5-122B-A10B、gpt-oss-120b、GLM-4.5-Air | 100B+ | 60GB+ | ❌ mmap 反复换页 | 1-3 tok/s，无实用价值 |
+
+\* 按 8.1 节"token 速度 ≈ 每 token 读取的权重体积 ÷ 介质带宽"计算，并计入 9.2 的混插折损。35B-A3B 取下限的原因：社区实测同样 A3B 激活规格下它比 Qwen3:30B-A3B 明显更慢（[ollama issue #14418](https://github.com/ollama/ollama/issues/14418) 报告约一半），主要归因于 GDN 新架构在 llama.cpp 里的实现尚在优化，随 ollama / llama.cpp 版本更新会改善。
+
+dense 27B 级（Qwen3.6-27B 等）再次落选的原因和第 8 节 32B 一样：dense 模型每 token 要读**全部**权重，27B 混合推理意味着每 token 从 50GB/s 的内存读约 12GB——这是带宽类瓶颈，内存再大也救不回来。**在 6GB 显存的机器上，"要质量选 MoE、不选大 dense"这条原则不变。**
+
+### 9.4 主推：Qwen3.5 / Qwen3.6-35B-A3B——HF 上比 30B-A3B 更高质量、且 40GB 刚好装得下
+
+回答"相较 30B-A3B 有没有更高质量的推荐"：**有，而且正好卡在 40GB 的甜点上。** [Qwen3.5 中等规模系列](https://zhuanlan.zhihu.com/p/2010283914153980210)（2026-02 开源）引入 GDN 线性注意力 + 稀疏 MoE 架构，其迭代版 Qwen3.6-35B-A3B（2026-04 开源，Apache 2.0，256 选 8 路由 + 1 共享专家）把总参从 30.5B 提到 35B，激活仍是约 3B：
+
+- **质量代差**：官方定位 Qwen3.6-35B-A3B 为智能体编程"小钢炮"，社区评测中编码 / Agent / 工具调用显著超过上一代 Qwen3-30B-A3B-Instruct-2507，通用知识面随总参同步提升——8.3 节"能力由总参决定、不由激活参数决定"的结论在它身上继续成立：**跑得仍像 3B 一样快，答得比 30B-A3B 更好**。
+- **长上下文成为现实选项**：Qwen3.5-35B-A3B 官方版带视觉（多模态）、上下文上限 26 万 token；GDN 混合架构的 KV cache 随上下文增长远慢于传统注意力，28GB 预算下开 16-32K 上下文很从容——这是 Qwen3-30B-A3B 给不了的（8.3 节的 RAG 首字延迟问题仍在，但上下文容量不再是最紧的约束）。
+- **生态成熟**：[Ollama 官方库](https://ollama.com/library/qwen3.5:35b-a3b)直接 `ollama run qwen3.5:35b-a3b`（默认量化约 23GB，含视觉塔）；HF 上两家量化厂的 GGUF 随模型同步发布——[unsloth/Qwen3.6-35B-A3B-GGUF](https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF)（动态量化，KLD 对比 22 项测试 21 项第一，含 Developer Role / 工具调用修复）和 [bartowski 版](https://huggingface.co/bartowski/Qwen_Qwen3.6-35B-A3B-GGUF)（27 个量化档可选），质量比标准 Q4_K_M 更接近原模型。
+- **两点代价**：① 9.3 表所述的 decode 偏慢（GDN 实现尚在成熟）；② **thinking 默认开启**——本仓库 `llm_config.py` 的 Ollama 分支已用 `reasoning_effort="none"` 关闭（与现有 `qwen3.5-4b` 同一机制，代码零改动），但要意识到 35B 的思考文本更长，体感延迟会被放大，教学场景保持关闭。
+
+中文场景的备选说明：`gpt-oss:20b`（OpenAI 开源）在英文推理 / 工具调用上很强且更快，但中文知识与中文指令明显弱于 Qwen，本仓库的学习场景不作主推。选型时以 [HF](https://huggingface.co/Qwen/Qwen3.5-35B-A3B) / ollama 库的最新发布为准——这个档位半年一代（搜索中已出现 Qwen3.8 的零星消息，规格未明，暂不纳入）。
+
+不想吃那两点代价时的两条退路：**要速度稳**留 `qwen3:30b-a3b-instruct-2507`（llama.cpp 支持最成熟，社区纯 CPU 实测都有 12-13 tok/s）；**要日常响应快**用 `qwen3.5:9b`（大半进 GPU，20-35 tok/s，质量比项目现用的 3.5-4B 高一档）。三档与 4B / 0.6B 的切换照旧只改 `.env` 一行。
+
+### 9.5 落地：命令与上下文配置
+
+先澄清一个容易踩的坑：**ollama 不能直接加载 HF 官方仓库的 `.safetensors` 原始权重**——`Modelfile FROM` 指向 safetensors 目录只对官方白名单里的少数旧架构有效（历史上连 qwen2 都曾被拒，见 [ollama issue #8132](https://github.com/ollama/ollama/issues/8132)），Qwen3.5/3.6 的 GDN 新架构不在其中，不要浪费时间尝试。GGUF 是唯一稳妥输入（这也是第 6.2 节流程以"量化 → GGUF"收尾的原因），三条路线任选：
+
+```bash
+# 路线 A：官方库直接拉（最省事，qwen3.5 系，默认量化约 23GB，含视觉塔）
+ollama run qwen3.5:35b-a3b
+
+# 路线 B：从 HF 直接拉 Qwen3.6 的社区 GGUF（ollama 官方支持 hf.co/ 前缀，自动下载加载）
+ollama run hf.co/unsloth/Qwen3.6-35B-A3B-GGUF:UD-Q4_K_XL
+
+# 路线 C：手动下载 GGUF（unsloth / bartowski 仓库）+ Modelfile 导入，顺便固定上下文
+# FROM ./Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf
+# PARAMETER num_ctx 16384
+```
+
+> 下载 unsloth 的 GGUF 仓库时会看到 `mmproj-*.gguf` 文件——那是视觉投影器（配合官方版的多模态能力），纯文本的 LangChain 学习场景不需要下载它，只取主模型 GGUF 即可。
+
+`.env` 切换照旧只改一行：
+
+```bash
+BACKEND=ollama
+MODEL_OLLAMA="qwen3.5:35b-a3b"
+```
+
+两个配套动作：
+
+1. **放宽 ollama 的运行时上下文**：ollama 默认 `num_ctx` 仍是 4096，不放开就吃不到 GDN 架构的长上下文红利（`OLLAMA_CONTEXT_LENGTH=16384` 环境变量或 Modelfile `PARAMETER num_ctx`；`curl :8000/api/ps` 看 `context_length` 确认生效，分析见 docs/09）。
+2. **`max_tokens` 别顶满运行时上下文的老约束依旧**（CLAUDE.md / docs/09）：上下文放宽后截断风险变小，但 1024-2048 的教学默认值仍合理。
+
+### 9.6 值不值：32GB → 40GB
+
+| 你的目标 | 32→40GB 值不值 |
+|---------|---------------|
+| 想要 HF 上 40GB 内存档的最强开源质量（新一代 35B-A3B） | **值**：这是 40GB 相对 32GB 的核心增量——32GB 下 35B-A3B 只能 Q4 塞边缝，40GB 下宽裕且能开长上下文 |
+| 想再往上（100B 级 MoE、gpt-oss-120b、GLM-4.5-Air） | 不值：60GB+ 权重，40GB 依旧装不下，那是 64GB+ 的世界 |
+| 主要为了微调 | 不值：瓶颈仍是 4.7GB 显存，4090 路线（第 6 节）不变 |
+| 已经满足于 30B-A3B / 14B | 边际：32GB 已够用，40GB 只带来 Q5 量化档 + 更长上下文余量 |
+
+---
+
+## 10. 一句话建议
 
 **先把 `.wslconfig` 内存调到 12GB；然后装 ollama 跑 `qwen3:4b`（日常主力，35-50 tok/s）和 `qwen3:8b`（要质量时切换，约 10 tok/s）；vLLM + 0.6B 保留做快速迭代。三档切换只改 `.env` 一行。**
 
@@ -395,3 +489,5 @@ decode 10-20 tok/s 流式可读（8.2 节），但 RAG 的 prompt 天然长（to
 **如果还想做成手机端侧聊天机器人：同一条 4090 工作流顺手多产出一个 4B（或 1.7B）的 Q4 GGUF，先装 ChatterUI / MNN Chat 零代码验证，再用 llama.cpp（Android JNI / iOS Metal）做自己的 App——见第 7 节。**
 
 **如果把宿主机内存升级到 32GB：推理端解锁 14B（5-9 tok/s）和 30B-A3B MoE（10-20 tok/s，本次升级的核心收益，`.wslconfig` 调到 24GB）；微调端上限不变（瓶颈在显存），大模型微调仍走 4090——详见第 8 节。**
+
+**如果再把内存升到 40GB（32+8）：核心收益是 HuggingFace 上新一代 35B-A3B MoE（Qwen3.5 / Qwen3.6-35B-A3B，质量全面超过 30B-A3B 一代；约 20-23GB 的 Q4 权重 + 16K 上下文都能安稳放下），`.wslconfig` 调到 32GB；代价是它比 30B-A3B 慢（GDN 架构支持尚在成熟）且 32+8 混插带宽打九折——要速度稳就留在 30B-A3B-Instruct-2507，要快用 qwen3.5:9b——详见第 9 节。**
